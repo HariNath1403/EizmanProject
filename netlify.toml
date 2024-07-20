@@ -1,6 +1,6 @@
 [build]
-  publish = "dist"
-  command = "python app.py"
+  publish = "dist" 
+  command = "" 
 
 [[redirects]]
   from = "/*"
