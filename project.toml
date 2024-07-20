@@ -1,0 +1,11 @@
+[build]
+  publish = "static" 
+  functions = ""      
+
+[build.command]
+  build = "npm run build"  # Example of a build command, if you have a build step
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
