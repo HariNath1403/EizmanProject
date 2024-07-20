@@ -3,9 +3,10 @@ from werkzeug.utils import secure_filename
 import os
 import pandas as pd
 from openpyxl import load_workbook, Workbook
-from openpyxl.drawing.image import Image
+from openpyxl.drawing.image import Image as OpenpyxlImage
 from openpyxl.styles import Font, Border, Alignment, Protection, NamedStyle, PatternFill
 from openpyxl.cell.cell import MergedCell
+from PIL import Image as PILImage
 
 app = Flask(__name__)
 
@@ -37,16 +38,11 @@ def index():
         output_path = os.path.join(app.config['UPLOAD_FOLDER'], f'{file_name}.xlsx')
         generate_wb(members, output_path, report_date)
 
-        # Set a flash message to indicate success
-        # flash('File has been processed successfully.')
-
-        # return redirect(url_for('index'))
-     # Send the generated file as a response
-        return send_file(output_path, as_attachment=True, attachment_filename=f'{file_name}.xlsx')
+        # Send the generated file as a response
+        return send_file(output_path, as_attachment=True, download_name=f'{file_name}.xlsx')
 
     return render_template('index.html')
 
-# 1. Import Libraries
 def copy_styles(source_cell, target_cell):
     if source_cell.has_style:
         target_cell.font = Font(
@@ -90,46 +86,56 @@ def copy_styles(source_cell, target_cell):
         target_cell.number_format = source_cell.number_format
 
 def format_excel(activesheet, destination):
-    for row in activesheet.iter_rows():
-        for cell in row:
-            new_cell = destination[cell.coordinate]
-            new_cell.value = cell.value
-            copy_styles(cell, new_cell)
-            
-    # Copy column widths
-    for col in activesheet.column_dimensions:
-        destination.column_dimensions[col].width = activesheet.column_dimensions[col].width
-
-    # Copy row heights
-    for row in activesheet.row_dimensions:
-        destination.row_dimensions[row].height = activesheet.row_dimensions[row].height
-    
-    for row in activesheet.iter_rows():
-        for cell in row:
-            new_cell = destination[cell.coordinate]
-            new_cell.value = cell.value
-            copy_styles(cell, new_cell)
-            
-    # Copy merged cells
-    for merged_cell in activesheet.merged_cells.ranges:
-        destination.merge_cells(str(merged_cell))
-    
-    for row in activesheet.iter_rows():
-        for cell in row:
-            new_cell = destination[cell.coordinate]
-            if not isinstance(cell, MergedCell):
+    try: 
+        for row in activesheet.iter_rows():
+            for cell in row:
+                new_cell = destination[cell.coordinate]
                 new_cell.value = cell.value
-            copy_styles(cell, new_cell)
-    
-    # Copy images
-    for image in activesheet._images:
-        img = Image(image.ref)
-        destination.add_image(img, image.anchor)
+                copy_styles(cell, new_cell)
+                
+        # Copy column widths
+        for col in activesheet.column_dimensions:
+            destination.column_dimensions[col].width = activesheet.column_dimensions[col].width
+
+        # Copy row heights
+        for row in activesheet.row_dimensions:
+            destination.row_dimensions[row].height = activesheet.row_dimensions[row].height
+        
+        for row in activesheet.iter_rows():
+            for cell in row:
+                new_cell = destination[cell.coordinate]
+                new_cell.value = cell.value
+                copy_styles(cell, new_cell)
+                
+        # Copy merged cells
+        for merged_cell in activesheet.merged_cells.ranges:
+            destination.merge_cells(str(merged_cell))
+        
+        for row in activesheet.iter_rows():
+            for cell in row:
+                new_cell = destination[cell.coordinate]
+                if not isinstance(cell, MergedCell):
+                    new_cell.value = cell.value
+                copy_styles(cell, new_cell)
+        
+        # Copy images
+        # for image in activesheet._images:
+        #     with open(image.ref, 'rb') as img_file:
+        #         pil_img = PILImage.open(img_file)
+        #         openpyxl_img = OpenpyxlImage(image.ref)
+        #         destination.add_image(openpyxl_img, image.anchor)
+
+        for image in activesheet._images:
+            img = OpenpyxlImage(image.path)
+            img.anchor = image.anchor
+            destination.add_image(img)
+    except Exception as e:
+        print(f"Error copying styles or images: {e}")
+    except:
+        pass
 
 def read_process_data(data_file):
-    # 4. Read Data
     excel_file = pd.ExcelFile(data_file)
-
     df = {}
     last_no = 0
 
@@ -140,9 +146,6 @@ def read_process_data(data_file):
         df[sheet_name] = frame
         last_no = sheet_name
 
-    # print(df)
-
-    # 5. Transfer & Group Data 
     members = {}
     for x in range(0, 146):
         curName = df[last_no].loc[x, 1]
@@ -181,12 +184,12 @@ def read_process_data(data_file):
 
         for i in range(0, len(names), 1):
             curName = names[i]
-            if (pd.notna(curName)):
+            if pd.notna(curName):
                 members[curName].append({key: {
                     'mo': mo_scores[i] * 1.0,
                     'others': others_scores[i] * 1.75
-                    }
-                })
+                }})
+
     return members
 
 def generate_wb(fulldict, output_path, report_date):
@@ -217,7 +220,6 @@ def generate_wb(fulldict, output_path, report_date):
             new_sheet['G{}'.format(11 + x)] = values_mo[x]
             new_sheet['H{}'.format(11 + x)] = values_others[x]
     
-    # new_wb.save('{}.xlsx'.format(newfile))
     new_wb.save(output_path)
     print('A new Excel document has been saved')
 
