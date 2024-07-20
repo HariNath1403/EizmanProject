@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Eizman Project</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='styles.css') }}"
+    />
+    <script src="{{ url_for('static', filename='scripts.js') }}" defer></script>
+    <style>
+      /* Include spinner styles here */
+      #loading-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.8); /* Semi-transparent white */
+        justify-content: center;
+        align-items: center;
+        z-index: 1000; /* Ensure it is on top */
+      }
+
+      .spinner {
+        border: 8px solid rgba(0, 0, 0, 0.1); /* Light grey */
+        border-radius: 50%;
+        border-top: 8px solid #3498db; /* Blue color */
+        width: 60px; /* Width of the spinner */
+        height: 60px; /* Height of the spinner */
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>The Eizman Project</h1>
+    </header>
+    <main>
+      <form
+        id="upload-form"
+        action="/"
+        method="post"
+        enctype="multipart/form-data"
+      >
+        <label for="data-file">Choose data file:</label>
+        <input
+          type="file"
+          id="data-file"
+          name="data-file"
+          required
+        /><br /><br />
+
+        <label for="report-date">Report Date:</label>
+        <input
+          type="text"
+          id="report-date"
+          name="report-date"
+          required
+        /><br /><br />
+
+        <label for="file-name">File Name:</label>
+        <input
+          type="text"
+          id="file-name"
+          name="file-name"
+          required
+        /><br /><br />
+
+        <button type="submit" class="cta-button">PROCESS</button>
+      </form>
+    </main>
+
+    <!-- Spinner and blur effect -->
+    <div id="loading-overlay" style="display: none">
+      <div class="spinner">&nbsp;</div>
+    </div>
+  </body>
+</html>
