@@ -172,15 +172,19 @@ def read_process_data(data_file):
             ae_val = df[key].loc[x, 11]
             ag_val = df[key].loc[x, 12]
 
+            member_sum_mo += pd.notna(m_val) + pd.notna(o_val)
+            member_sum_oth += pd.notna(q_val) + pd.notna(s_val) + pd.notna(u_val) + pd.notna(w_val) + pd.notna(y_val) + \
+                pd.notna(aa_val) + pd.notna(ac_val) + pd.notna(ae_val) + pd.notna(ag_val)
+
             if x % 10 == 0 and x != 0 or x == 145:
                 mo_scores.append(member_sum_mo)
                 others_scores.append(member_sum_oth)
                 member_sum_mo = 0
                 member_sum_oth = 0
-            else:
-                member_sum_mo += pd.notna(m_val) + pd.notna(o_val)
-                member_sum_oth += pd.notna(q_val) + pd.notna(s_val) + pd.notna(u_val) + pd.notna(w_val) + pd.notna(y_val) + \
-                    pd.notna(aa_val) + pd.notna(ac_val) + pd.notna(ae_val) + pd.notna(ag_val)
+            # else:
+            #     member_sum_mo += pd.notna(m_val) + pd.notna(o_val)
+            #     member_sum_oth += pd.notna(q_val) + pd.notna(s_val) + pd.notna(u_val) + pd.notna(w_val) + pd.notna(y_val) + \
+            #         pd.notna(aa_val) + pd.notna(ac_val) + pd.notna(ae_val) + pd.notna(ag_val)
 
         for i in range(0, len(names), 1):
             curName = names[i]
@@ -214,11 +218,15 @@ def generate_wb(fulldict, output_path, report_date):
             values_others.append(fulldict[name][x]['{}'.format(x + 1)]['others'])
             
         new_sheet['D5'] = name
+        new_sheet['B50'] = name
         new_sheet['K6'] = report_date
         
         for x in range(0, 31):
             new_sheet['G{}'.format(11 + x)] = values_mo[x]
+            new_sheet['I{}'.format(11 + x)] = values_mo[x]
+
             new_sheet['H{}'.format(11 + x)] = values_others[x]
+            new_sheet['J{}'.format(11 + x)] = values_others[x] / 1.75
     
     new_wb.save(output_path)
     print('A new Excel document has been saved')
