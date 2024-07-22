@@ -176,7 +176,7 @@ def read_process_data(data_file):
             member_sum_oth += pd.notna(q_val) + pd.notna(s_val) + pd.notna(u_val) + pd.notna(w_val) + pd.notna(y_val) + \
                 pd.notna(aa_val) + pd.notna(ac_val) + pd.notna(ae_val) + pd.notna(ag_val)
 
-            if x % 10 == 0 and x != 0 or x == 145:
+            if (x + 1) % 10 == 0 and x != 0:
                 mo_scores.append(member_sum_mo)
                 others_scores.append(member_sum_oth)
                 member_sum_mo = 0
