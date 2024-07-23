@@ -2,6 +2,7 @@ from flask import Flask, request, render_template, redirect, url_for, send_file
 from werkzeug.utils import secure_filename
 import os
 import pandas as pd
+import numpy as np
 from openpyxl import load_workbook, Workbook
 from openpyxl.drawing.image import Image as OpenpyxlImage
 from openpyxl.styles import Font, Border, Alignment, Protection, NamedStyle, PatternFill
@@ -85,6 +86,35 @@ def copy_styles(source_cell, target_cell):
         )
         target_cell.number_format = source_cell.number_format
 
+def convert_to_numeric(value):
+    # Handle missing values
+    if pd.isnull(value):
+        return np.nan
+
+    if isinstance(value, (int, float)):
+        return value
+    
+    # Remove currency symbols and commas
+    value = str(value).replace('$', '').replace(',', '').strip()
+    
+    try:
+        # Try to convert to a datetime object and then to a timestamp
+        value = pd.to_datetime(value)
+        return value.timestamp()
+    except (ValueError, TypeError):
+        try:
+            # Attempt to convert to a numeric value
+            return pd.to_numeric(value, errors='coerce')
+        except (ValueError, TypeError):
+            return np.nan
+            
+def check_number_instance(no):
+    no = convert_to_numeric(no)
+    if pd.notnull(no) and isinstance(no, (int, float)):
+        return 1
+    else:
+        return 0
+
 def format_excel(activesheet, destination):
     try: 
         for row in activesheet.iter_rows():
@@ -138,61 +168,68 @@ def read_process_data(data_file):
     excel_file = pd.ExcelFile(data_file)
     df = {}
     last_no = 0
+    last_row = 0
 
     for sheet_name in excel_file.sheet_names:
-        frame = pd.read_excel(excel_file, sheet_name, header=None, usecols="C, M, O, Q, S, U, W, Y, AA, AC, AE, AG", skiprows=12, nrows=162,
+        frame = pd.read_excel(excel_file, sheet_name, header=None, usecols="C, M, O, Q, S, U, W, Y, AA, AC, AE, AG", skiprows=12, nrows=150,
             names=range(1, 13))  # Assuming 12 columns: C, M, O, Q, S, U, W, Y, AA, AC, AE, AG
 
         df[sheet_name] = frame
         last_no = sheet_name
+        last_row = len(frame)
 
     members = {}
-    for x in range(0, 146):
-        curName = df[last_no].loc[x, 1]
-        if pd.notna(curName):
-            members[curName] = []
+    for x in range(0, last_row):
+        try:
+            curName = df[last_no].loc[x, 1]
+            if pd.notna(curName):
+                members[curName] = []
+        except:
+            pass
 
     for key in df.keys():
-        names = [df[last_no].loc[x, 1] for x in range(0, 146, 10)]
+        names = [df[last_no].loc[x, 1] for x in range(0, last_row, 10)]
         mo_scores = []
         others_scores = []
         member_sum_mo = 0
         member_sum_oth = 0
 
-        for x in range(0, 146):
-            m_val = df[key].loc[x, 2]
-            o_val = df[key].loc[x, 3]
-            q_val = df[key].loc[x, 4]
-            s_val = df[key].loc[x, 5]
-            u_val = df[key].loc[x, 6]
-            w_val = df[key].loc[x, 7]
-            y_val = df[key].loc[x, 8]
-            aa_val = df[key].loc[x, 9]
-            ac_val = df[key].loc[x, 10]
-            ae_val = df[key].loc[x, 11]
-            ag_val = df[key].loc[x, 12]
-
-            member_sum_mo += pd.notna(m_val) + pd.notna(o_val)
-            member_sum_oth += pd.notna(q_val) + pd.notna(s_val) + pd.notna(u_val) + pd.notna(w_val) + pd.notna(y_val) + \
-                pd.notna(aa_val) + pd.notna(ac_val) + pd.notna(ae_val) + pd.notna(ag_val)
-
-            if (x + 1) % 10 == 0 and x != 0:
-                mo_scores.append(member_sum_mo)
-                others_scores.append(member_sum_oth)
-                member_sum_mo = 0
-                member_sum_oth = 0
-            # else:
-            #     member_sum_mo += pd.notna(m_val) + pd.notna(o_val)
-            #     member_sum_oth += pd.notna(q_val) + pd.notna(s_val) + pd.notna(u_val) + pd.notna(w_val) + pd.notna(y_val) + \
-            #         pd.notna(aa_val) + pd.notna(ac_val) + pd.notna(ae_val) + pd.notna(ag_val)
+        for x in range(0, last_row):
+            try:
+                m_val = check_number_instance(df[key].loc[x, 2])
+                o_val = check_number_instance(df[key].loc[x, 3])
+                q_val = check_number_instance(df[key].loc[x, 4])
+                s_val = check_number_instance(df[key].loc[x, 5])
+                u_val = check_number_instance(df[key].loc[x, 6])
+                w_val = check_number_instance(df[key].loc[x, 7])
+                y_val = check_number_instance(df[key].loc[x, 8])
+                aa_val = check_number_instance(df[key].loc[x, 9])
+                ac_val = check_number_instance(df[key].loc[x, 10])
+                ae_val = check_number_instance(df[key].loc[x, 11])
+                ag_val = check_number_instance(df[key].loc[x, 12])
+        
+                member_sum_mo += m_val + o_val
+                member_sum_oth += q_val + s_val + u_val + w_val + y_val + aa_val + ac_val + ae_val + ag_val
+                
+                if (x + 1) % 10 == 0 and x != 0:
+                    mo_scores.append(member_sum_mo)
+                    others_scores.append(member_sum_oth)          
+                    member_sum_mo = 0
+                    member_sum_oth = 0
+            except:
+                pass
 
         for i in range(0, len(names), 1):
-            curName = names[i]
-            if pd.notna(curName):
-                members[curName].append({key: {
-                    'mo': mo_scores[i] * 1.0,
-                    'others': others_scores[i] * 1.75
-                }})
+            try:
+                curName = names[i]
+                if (pd.notna(curName)):
+                    members[curName].append({key : {
+                        'mo': mo_scores[i] * 1.0,
+                        'others': others_scores[i] * 1.75
+                        }
+                    })
+            except:
+                pass
 
     return members
 
