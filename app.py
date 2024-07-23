@@ -251,19 +251,25 @@ def generate_wb(fulldict, output_path, report_date):
         values_others = []
 
         for x in range(0, 31):
-            values_mo.append(fulldict[name][x]['{}'.format(x + 1)]['mo'])
-            values_others.append(fulldict[name][x]['{}'.format(x + 1)]['others'])
+            try:
+                values_mo.append(fulldict[name][x]['{}'.format(x + 1)]['mo'])
+                values_others.append(fulldict[name][x]['{}'.format(x + 1)]['others'])
+            except:
+                pass
             
         new_sheet['D5'] = name
         new_sheet['B50'] = name
         new_sheet['K6'] = report_date
         
         for x in range(0, 31):
-            new_sheet['G{}'.format(11 + x)] = values_mo[x]
-            new_sheet['I{}'.format(11 + x)] = values_mo[x]
+            try:
+                new_sheet['G{}'.format(11 + x)] = values_mo[x]
+                new_sheet['I{}'.format(11 + x)] = values_mo[x]
 
-            new_sheet['H{}'.format(11 + x)] = values_others[x]
-            new_sheet['J{}'.format(11 + x)] = values_others[x] / 1.75
+                new_sheet['H{}'.format(11 + x)] = values_others[x]
+                new_sheet['J{}'.format(11 + x)] = values_others[x] / 1.75
+            except:
+                pass
     
     new_wb.save(output_path)
     print('A new Excel document has been saved')
