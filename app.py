@@ -8,16 +8,18 @@ from openpyxl.drawing.image import Image as OpenpyxlImage
 from openpyxl.styles import Font, Border, Alignment, Protection, NamedStyle, PatternFill
 from openpyxl.cell.cell import MergedCell
 from PIL import Image as PILImage
+import io
 
 app = Flask(__name__)
+app.secret_key = 'supersecretkey'
 
 # Folder to store uploaded files
-UPLOAD_FOLDER = 'uploads'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+# UPLOAD_FOLDER = 'uploads'
+# app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# Ensure the upload folder exists
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
+# # Ensure the upload folder exists
+# if not os.path.exists(UPLOAD_FOLDER):
+#     os.makedirs(UPLOAD_FOLDER)
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -28,19 +30,30 @@ def index():
         file_name = request.form['file-name']
 
         # Save the uploaded file
-        filename = secure_filename(data_file.filename)
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        data_file.save(file_path)
+        # filename = secure_filename(data_file.filename)
+        # file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        # data_file.save(file_path)
+
+        if data_file:
+            # Process the data without saving the file
+            data_file_stream = io.BytesIO(data_file.read())
+            members = read_process_data(data_file_stream)
 
         # Process the data
-        members = read_process_data(file_path)  # Update to return members
+        # members = read_process_data(file_path)  # Update to return members
 
-        read_process_data(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        output_path = os.path.join(app.config['UPLOAD_FOLDER'], f'{file_name}.xlsx')
-        generate_wb(members, output_path, report_date)
+        # read_process_data(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        # output_path = os.path.join(app.config['UPLOAD_FOLDER'], f'{file_name}.xlsx')
+        # generate_wb(members, output_path, report_date)
+
+            output_stream = io.BytesIO()
+            generate_wb(members, output_stream, report_date)   
+            output_stream.seek(0) 
 
         # Send the generated file as a response
-        return send_file(output_path, as_attachment=True, download_name=f'{file_name}.xlsx')
+        # return send_file(output_path, as_attachment=True, download_name=f'{file_name}.xlsx')
+    
+        return send_file(output_stream, as_attachment=True, download_name=f'{file_name}.xlsx', mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
     return render_template('index.html')
 
@@ -166,17 +179,28 @@ def format_excel(activesheet, destination):
 
 def read_process_data(data_file):
     excel_file = pd.ExcelFile(data_file)
+
+    report_last_no = 150
+    columns = ["C", "M", "O", "Q", "S", "U", "W", "Y", "AA", "AC", "AE", "AG"]
+    usecols = "C, M, O, Q, S, U, W, Y, AA, AC, AE, AG"
+
     df = {}
     last_no = 0
     last_row = 0
 
     for sheet_name in excel_file.sheet_names:
-        frame = pd.read_excel(excel_file, sheet_name, header=None, usecols="C, M, O, Q, S, U, W, Y, AA, AC, AE, AG", skiprows=12, nrows=150,
+        frame = pd.read_excel(excel_file, sheet_name, header=None, usecols="C, M, O, Q, S, U, W, Y, AA, AC, AE, AG", skiprows=12, nrows=report_last_no,
             names=range(1, 13))  # Assuming 12 columns: C, M, O, Q, S, U, W, Y, AA, AC, AE, AG
 
         df[sheet_name] = frame
         last_no = sheet_name
         last_row = len(frame)
+
+        if len(frame) < report_last_no:
+            padding = pd.DataFrame(index=range(len(frame), 150), columns=columns)
+            frame = pd.concat([frame, padding])
+
+        df[sheet_name] = frame
 
     members = {}
     for x in range(0, last_row):
@@ -188,13 +212,14 @@ def read_process_data(data_file):
             pass
 
     for key in df.keys():
-        names = [df[last_no].loc[x, 1] for x in range(0, last_row, 10)]
+        # names = [df[last_no].loc[x, 1] for x in range(0, last_row, 10)]
+        names = [x for x in members.keys()]
         mo_scores = []
         others_scores = []
         member_sum_mo = 0
         member_sum_oth = 0
 
-        for x in range(0, last_row):
+        for x in range(0, last_row + 1):
             try:
                 m_val = check_number_instance(df[key].loc[x, 2])
                 o_val = check_number_instance(df[key].loc[x, 3])
