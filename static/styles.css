@@ -82,6 +82,29 @@ input[type="file"] {
   background-color: #e6ac00;
 }
 
+.flex-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px; /* Spacing between the inputs */
+}
+
+.flex-row .form-group {
+  flex: 1; /* Allow equal width for both inputs */
+}
+
+.flex-row .form-group label {
+  font-weight: bold;
+  color: #4caf50;
+}
+
+input[type="number"] {
+  padding: 10px;
+  border: 2px solid #4caf50;
+  border-radius: 4px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
 body {
   font-family: Arial, sans-serif;
 }

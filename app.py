@@ -8,6 +8,8 @@ from openpyxl.drawing.image import Image as OpenpyxlImage
 from openpyxl.styles import Font, Border, Alignment, Protection, NamedStyle, PatternFill
 from openpyxl.cell.cell import MergedCell
 from PIL import Image as PILImage
+from datetime import datetime
+import calendar
 import io
 
 app = Flask(__name__)
@@ -28,6 +30,8 @@ def index():
         data_file = request.files['data-file']
         report_date = request.form['report-date']
         file_name = request.form['file-name']
+        month_val = request.form['month']
+        year_val = request.form['year']
 
         # Save the uploaded file
         # filename = secure_filename(data_file.filename)
@@ -47,7 +51,7 @@ def index():
         # generate_wb(members, output_path, report_date)
 
             output_stream = io.BytesIO()
-            generate_wb(members, output_stream, report_date)   
+            generate_wb(members, output_stream, report_date, month_val, year_val)   
             output_stream.seek(0) 
 
         # Send the generated file as a response
@@ -182,6 +186,7 @@ def read_process_data(data_file):
 
     report_last_no = 150
     columns = ["C", "M", "O", "Q", "S", "U", "W", "Y", "AA", "AC", "AE", "AG"]
+    columns = ["C", "O", "Q", "S", "U", "W", "Y", "AA", "AC", "AE", "AG", "AI"]
     usecols = "C, M, O, Q, S, U, W, Y, AA, AC, AE, AG"
 
     df = {}
@@ -189,7 +194,7 @@ def read_process_data(data_file):
     last_row = 0
 
     for sheet_name in excel_file.sheet_names:
-        frame = pd.read_excel(excel_file, sheet_name, header=None, usecols="C, M, O, Q, S, U, W, Y, AA, AC, AE, AG", skiprows=12, nrows=report_last_no,
+        frame = pd.read_excel(excel_file, sheet_name, header=None, usecols="C, O, Q, S, U, W, Y, AA, AC, AE, AG, AI", skiprows=12, nrows=report_last_no,
             names=range(1, 13))  # Assuming 12 columns: C, M, O, Q, S, U, W, Y, AA, AC, AE, AG
 
         df[sheet_name] = frame
@@ -258,7 +263,7 @@ def read_process_data(data_file):
 
     return members
 
-def generate_wb(fulldict, output_path, report_date):
+def generate_wb(fulldict, output_path, report_date, month_val, year_val):
     template_file = 'Template.xlsx'
     template_wb = load_workbook(template_file)
     template_sheet = template_wb['Template']
@@ -267,6 +272,16 @@ def generate_wb(fulldict, output_path, report_date):
     new_wb.remove(new_wb.active)
     
     allNames = list(fulldict.keys())
+
+    days_in_malay = {
+        'Monday': 'Isnin',
+        'Tuesday': 'Selasa',
+        'Wednesday': 'Rabu',
+        'Thursday': 'Khamis',
+        'Friday': 'Jumaat',
+        'Saturday': 'Sabtu',
+        'Sunday': 'Ahad'
+    }
         
     for name in allNames:
         new_sheet = new_wb.create_sheet(title=name)
@@ -295,6 +310,16 @@ def generate_wb(fulldict, output_path, report_date):
                 new_sheet['J{}'.format(11 + x)] = values_others[x] / 1.75
             except:
                 pass
+
+            try:
+                # Attempt to create a date
+                date_obj = datetime(int(year_val), int(month_val), x + 1)
+                day_name_malay = days_in_malay[date_obj.strftime('%A')]  # Get Malay day name
+                # Write the day and date in Malay to column C
+                new_sheet[f'C{11 + x}'] = day_name_malay
+            except ValueError:
+                # Invalid date, leave cell empty
+                new_sheet[f'C{11 + x}'] = ""
     
     new_wb.save(output_path)
     print('A new Excel document has been saved')
